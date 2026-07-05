@@ -19,6 +19,9 @@ from config import (
 
 SENT_FILE = "sent_events.json"
 
+TEST_MODE = True
+TEST_SERIES = "motogp"
+
 CALENDARS = [
     {
         "series": "f1",
@@ -53,7 +56,10 @@ CALENDARS = [
             "warm up",
             "warmup",
             "race",
-            "grand prix"
+            "grand prix",
+            "gara",
+            "qualifiche",
+            "prove libere"
         ]
     }
 ]
@@ -83,7 +89,12 @@ def send_telegram_message(text):
         "parse_mode": "HTML"
     }
 
+    print(f"invio messaggio telegram a chat_id={CHAT_ID}")
     response = requests.post(url, json=payload, timeout=15)
+
+    print("telegram status:", response.status_code)
+    print("telegram response:", response.text)
+
     response.raise_for_status()
     return response.json()
 
@@ -166,29 +177,26 @@ def prettify_summary(summary):
         "q2": "Q2",
         "grand prix": "Grand Prix",
         "qualifying": "Qualifying",
+        "qualifiche": "Qualifiche",
         "sprint": "Sprint",
         "warm up": "Warm Up",
         "warmup": "Warm Up",
         "race": "Race",
-        "practice": "Practice"
+        "gara": "Gara",
+        "practice": "Practice",
+        "prove libere": "Prove Libere"
     }
 
-    lower_text = text.lower()
-
+    result = text
     for old, new in replacements.items():
-        lower_text = lower_text.replace(old, new)
+        result = result.replace(old, new)
+        result = result.replace(old.capitalize(), new)
+        result = result.replace(old.upper(), new)
 
-    words = []
-    for word in lower_text.split():
-        if word in ["MotoGP", "Formula", "F1", "FP1", "FP2", "FP3", "PR1", "PR2", "P1", "P2", "Q1", "Q2", "Grand", "Prix", "Qualifying", "Sprint", "Warm", "Up", "Race", "Practice"]:
-            words.append(word)
-        else:
-            words.append(word.capitalize())
-
-    return " ".join(words)
+    return result
 
 
-def format_message(series_name, summary, start_local):
+def format_message(series_name, summary, start_local, is_test=False):
     clean_summary = escape(prettify_summary(summary))
     date_str = start_local.strftime("%d/%m/%Y")
     time_str = start_local.strftime("%H:%M")
@@ -206,15 +214,21 @@ def format_message(series_name, summary, start_local):
         title = "Motorsport Alert"
         category = "Motorsport"
 
+    if is_test:
+        top = "🧪 <b>TEST GITHUB ACTIONS</b>\n\n"
+    else:
+        top = ""
+
     return (
+        f"{top}"
         f"{icon} <b>{title}</b>\n\n"
         f"<b>Campionato:</b> {category}\n"
-        f"<b>Sessione:</b> {clean_summary}\n\n"
-        f"<b>Inizio tra:</b> {REMIND_BEFORE_MINUTES} minuti\n"
+        f"<b>Sessione:</b> {clean_summary}\n"
         f"<b>Data:</b> {date_str}\n"
         f"<b>Ora:</b> {time_str}\n"
         f"<b>Fuso orario:</b> {TIMEZONE}\n\n"
-        f"<i>Preparati, la sessione sta per cominciare.</i>"
+        f"<b>Promemoria:</b> {REMIND_BEFORE_MINUTES} minuti prima\n\n"
+        f"<i>Messaggio generato automaticamente dal bot.</i>"
     )
 
 
@@ -223,11 +237,11 @@ def send_test_notification(series_name="motogp"):
     fake_start = datetime.now(tz) + timedelta(minutes=REMIND_BEFORE_MINUTES)
 
     if series_name == "f1":
-        fake_summary = "formula 1 qualifying"
+        fake_summary = "Formula 1 - Qualifying"
     else:
-        fake_summary = "motogp qualifying 2"
+        fake_summary = "MotoGP - Qualifiche 2"
 
-    text = format_message(series_name, fake_summary, fake_start)
+    text = format_message(series_name, fake_summary, fake_start, is_test=True)
     send_telegram_message(text)
     print(f"notifica test inviata per {series_name}")
 
@@ -293,8 +307,7 @@ def main():
 
 
 if __name__ == "__main__":
-    send_test_notification("motogp")
-    main()
-    # per testare il layout del messaggio senza aspettare un evento vero:
-    # send_test_notification("motogp")
-    # send_test_notification("f1")
+    if TEST_MODE:
+        send_test_notification(TEST_SERIES)
+    else:
+        main()
