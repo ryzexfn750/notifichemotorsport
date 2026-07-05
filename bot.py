@@ -139,7 +139,7 @@ def normalize_datetime(dt, timezone_name):
 def should_notify(event_time, now, remind_before_minutes):
     target_time = event_time - timedelta(minutes=remind_before_minutes)
     delta_seconds = (now - target_time).total_seconds()
-    return -60 <= delta_seconds <= 60
+    return 0 <= delta_seconds < 360
 
 
 def make_event_id(series_name, summary, start_dt):
