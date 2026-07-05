@@ -19,9 +19,6 @@ from config import (
 
 SENT_FILE = "sent_events.json"
 
-TEST_MODE = True
-TEST_SERIES = "motogp"
-
 CALENDARS = [
     {
         "series": "f1",
@@ -89,12 +86,7 @@ def send_telegram_message(text):
         "parse_mode": "HTML"
     }
 
-    print(f"invio messaggio telegram a chat_id={CHAT_ID}")
     response = requests.post(url, json=payload, timeout=15)
-
-    print("telegram status:", response.status_code)
-    print("telegram response:", response.text)
-
     response.raise_for_status()
     return response.json()
 
@@ -196,7 +188,7 @@ def prettify_summary(summary):
     return result
 
 
-def format_message(series_name, summary, start_local, is_test=False):
+def format_message(series_name, summary, start_local):
     clean_summary = escape(prettify_summary(summary))
     date_str = start_local.strftime("%d/%m/%Y")
     time_str = start_local.strftime("%H:%M")
@@ -214,13 +206,7 @@ def format_message(series_name, summary, start_local, is_test=False):
         title = "Motorsport Alert"
         category = "Motorsport"
 
-    if is_test:
-        top = "🧪 <b>TEST GITHUB ACTIONS</b>\n\n"
-    else:
-        top = ""
-
     return (
-        f"{top}"
         f"{icon} <b>{title}</b>\n\n"
         f"<b>Campionato:</b> {category}\n"
         f"<b>Sessione:</b> {clean_summary}\n"
@@ -228,22 +214,8 @@ def format_message(series_name, summary, start_local, is_test=False):
         f"<b>Ora:</b> {time_str}\n"
         f"<b>Fuso orario:</b> {TIMEZONE}\n\n"
         f"<b>Promemoria:</b> {REMIND_BEFORE_MINUTES} minuti prima\n\n"
-        f"<i>Messaggio generato automaticamente dal bot.</i>"
+        f"<i>Preparati, la sessione sta per cominciare.</i>"
     )
-
-
-def send_test_notification(series_name="motogp"):
-    tz = pytz.timezone(TIMEZONE)
-    fake_start = datetime.now(tz) + timedelta(minutes=REMIND_BEFORE_MINUTES)
-
-    if series_name == "f1":
-        fake_summary = "Formula 1 - Qualifying"
-    else:
-        fake_summary = "MotoGP - Qualifiche 2"
-
-    text = format_message(series_name, fake_summary, fake_start, is_test=True)
-    send_telegram_message(text)
-    print(f"notifica test inviata per {series_name}")
 
 
 def main():
@@ -273,8 +245,6 @@ def main():
         for event in events:
             summary = event["summary"]
             start_local = normalize_datetime(event["start"], TIMEZONE)
-
-            print(f"[{series}] {summary} | {start_local.isoformat()}")
 
             if start_local < now:
                 continue
@@ -307,7 +277,4 @@ def main():
 
 
 if __name__ == "__main__":
-    if TEST_MODE:
-        send_test_notification(TEST_SERIES)
-    else:
-        main()
+    main()
