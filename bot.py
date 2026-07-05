@@ -293,6 +293,7 @@ def main():
 
 
 if __name__ == "__main__":
+    send_test_notification("motogp")
     main()
     # per testare il layout del messaggio senza aspettare un evento vero:
     # send_test_notification("motogp")
